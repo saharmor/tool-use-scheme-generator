@@ -2,7 +2,7 @@
 
 ## 🚀 For Users
 
-Visit the live app: **https://saharmor.github.io/tool-use-scheme-generator/**
+Visit the live app: **http://saharmor.me/tool-use-scheme-generator/**
 
 ### Basic Usage
 

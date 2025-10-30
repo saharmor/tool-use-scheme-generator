@@ -61,26 +61,19 @@ tool-use-scheme-generator/
 ### Current Status
 - ✅ Code pushed to GitHub
 - ✅ GitHub Actions workflow configured
-- ⏳ **Awaiting GitHub Pages activation**
+- ✅ **Site deployed and live!**
 
-### Next Steps to Deploy
+### Deployment Complete! ✅
 
-1. **Enable GitHub Pages** (1 minute):
-   - Go to: https://github.com/saharmor/tool-use-scheme-generator/settings/pages
-   - Under "Build and deployment", set Source to: **GitHub Actions**
-   - Save
+The site is now live at:
+- **Primary**: http://saharmor.me/tool-use-scheme-generator/
+- **Alternate**: https://saharmor.github.io/tool-use-scheme-generator/
 
-2. **Trigger Deployment**:
-   - The workflow will run automatically
-   - Or manually trigger from: https://github.com/saharmor/tool-use-scheme-generator/actions
+GitHub Actions workflow is set up for automatic deployment on every push to `main`.
 
-3. **Verify Deployment**:
-   - Check Actions tab for workflow status
-   - Once completed, visit: **https://saharmor.github.io/tool-use-scheme-generator/**
-
-### Expected Timeline
+### Auto-Deployment
 - Workflow runs in ~1-2 minutes
-- Site goes live immediately after successful deployment
+- Site updates immediately after successful deployment
 - Future pushes to `main` automatically redeploy
 
 ## 📦 What's Included
@@ -163,10 +156,9 @@ Recommended tool: **Gifski** (Mac) or **ezgif.com** (web-based)
 
 ## 🔗 Important Links
 
+- **Live Site**: http://saharmor.me/tool-use-scheme-generator/
 - **Repository**: https://github.com/saharmor/tool-use-scheme-generator
-- **Live Site** (after Pages enabled): https://saharmor.github.io/tool-use-scheme-generator/
-- **Settings**: https://github.com/saharmor/tool-use-scheme-generator/settings
-- **Actions**: https://github.com/saharmor/tool-use-scheme-generator/actions
+- **GitHub Actions**: https://github.com/saharmor/tool-use-scheme-generator/actions
 - **Local Test**: http://localhost:8000
 
 ## ✨ What Makes This Special
@@ -188,11 +180,10 @@ All deliverables from the brief have been implemented:
 - ✅ A11y labels and keyboard navigation
 - ✅ README with features and examples
 - ✅ MIT license
-- ✅ Configured for GitHub Pages deployment
+- ✅ Deployed to GitHub Pages and live!
 
-**Only remaining**: 
-1. Enable GitHub Pages in repository settings (1 click)
-2. Record demo GIF (optional but recommended)
+**Optional enhancement**: 
+- Record demo GIF (instructions in DEMO.md)
 
 ---
 

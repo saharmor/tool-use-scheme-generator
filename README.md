@@ -6,7 +6,9 @@ A lightweight, static web app for generating valid OpenAI "tools" JSON schemas. 
 
 ## 🚀 Live App
 
-**[Launch the Generator →](https://saharmor.github.io/tool-use-scheme-generator/)**
+**[Launch the Generator →](http://saharmor.me/tool-use-scheme-generator/)**
+
+Also available at: https://saharmor.github.io/tool-use-scheme-generator/
 
 ## ✨ Features
 
