@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tool Calls Schema Generator</title>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <header>
+    <h1>Tool Calls Schema Generator</h1>
+    <p class="subtitle">Generate valid OpenAI tools JSON schema</p>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="editor-panel">
+        <div class="panel-header">
+          <h2>Functions</h2>
+          <div class="action-buttons">
+            <button id="add-function-btn" class="btn btn-primary" aria-label="Add function">+ Add Function</button>
+            <button id="import-btn" class="btn" aria-label="Import JSON">Import</button>
+            <button id="reset-btn" class="btn btn-secondary" aria-label="Reset all">Reset All</button>
+          </div>
+        </div>
+        
+        <div id="functions-container" class="functions-list"></div>
+      </div>
+
+      <div class="preview-panel">
+        <div class="panel-header">
+          <h2>Final Schema</h2>
+          <div class="action-buttons">
+            <button id="test-btn" class="btn" aria-label="Test output">Test</button>
+            <button id="share-btn" class="btn" aria-label="Share">Share</button>
+            <button id="copy-btn" class="btn btn-primary" aria-label="Copy JSON">Copy</button>
+            <button id="download-btn" class="btn" aria-label="Download">Download</button>
+          </div>
+        </div>
+        
+        <div id="validation-status" class="validation-status" role="status" aria-live="polite"></div>
+        
+        <pre id="schema-preview" class="schema-output"><code>{}</code></pre>
+      </div>
+    </div>
+  </main>
+
+  <div id="import-modal" class="modal" role="dialog" aria-labelledby="import-title" aria-modal="true" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="import-title">Import Tools JSON</h3>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="import-textarea">Paste your tools JSON array:</label>
+        <textarea id="import-textarea" rows="10" placeholder='[{"type": "function", "function": {...}}]'></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="import-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="import-confirm-btn" class="btn btn-primary">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="advanced-modal" class="modal" role="dialog" aria-labelledby="advanced-title" aria-modal="true" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="advanced-title">Advanced Options</h3>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="advanced-modal-body">
+        <!-- Dynamic content -->
+      </div>
+      <div class="modal-footer">
+        <button id="advanced-close-btn" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="share-modal" class="modal" role="dialog" aria-labelledby="share-title" aria-modal="true" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="share-title">Share Configuration</h3>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="share-url">Copy this URL to share your configuration:</label>
+        <input type="text" id="share-url" readonly>
+        <button id="copy-share-url-btn" class="btn btn-primary">Copy URL</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
+

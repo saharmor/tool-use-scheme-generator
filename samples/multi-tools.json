@@ -1,0 +1,86 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "search_products",
+      "description": "Search for products in the catalog",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "category": {
+            "type": "string",
+            "description": "Product category filter",
+            "enum": ["electronics", "clothing", "books", "home", "sports"]
+          },
+          "max_price": {
+            "type": "number",
+            "description": "Maximum price filter",
+            "minimum": 0
+          },
+          "in_stock": {
+            "type": "boolean",
+            "description": "Only show in-stock items",
+            "default": true
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_to_cart",
+      "description": "Add a product to the shopping cart",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "description": "Unique product identifier"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Number of items to add",
+            "minimum": 1,
+            "maximum": 99,
+            "default": 1
+          }
+        },
+        "required": ["product_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "checkout",
+      "description": "Process the order and complete checkout",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "payment_method": {
+            "type": "string",
+            "description": "Payment method",
+            "enum": ["credit_card", "debit_card", "paypal", "apple_pay"]
+          },
+          "shipping_address": {
+            "type": "string",
+            "description": "Full shipping address"
+          },
+          "gift_wrap": {
+            "type": "boolean",
+            "description": "Add gift wrapping",
+            "default": false
+          }
+        },
+        "required": ["payment_method", "shipping_address"]
+      }
+    }
+  }
+]
+

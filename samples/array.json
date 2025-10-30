@@ -1,0 +1,42 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "send_emails",
+      "description": "Send emails to multiple recipients",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "recipients": {
+            "type": "array",
+            "description": "List of email addresses",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body content"
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Priority level",
+            "minimum": 1,
+            "maximum": 5,
+            "default": 3
+          }
+        },
+        "required": ["recipients", "subject", "body"]
+      }
+    }
+  }
+]
+
