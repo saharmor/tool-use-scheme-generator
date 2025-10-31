@@ -1,8 +1,18 @@
-# Tool Calls Schema Generator
+<div align="center">
+
+# ✨ Tool Calls Schema Generator
 
 A lightweight, static web app for generating valid OpenAI "tools" JSON schemas. Define functions and parameters with advanced validation options, then copy, download, import, or share your configurations.
 
+<p>
+<a href="https://www.linkedin.com/in/sahar-mor/" target="_blank"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue" alt="LinkedIn"></a>
+<a href="https://x.com/theaievangelist" target="_blank"><img src="https://img.shields.io/twitter/follow/:theaievangelist" alt="X"></a>
+<a href="http://aitidbits.ai/" target="_blank"><img src="https://github.com/saharmor/saharmor.github.io/blob/main/images/ai%20tidbits%20logo.png?raw=true" alt="Stay updated on AI" width="20" height="20" style="vertical-align: middle;"> Stay updated on AI</a>
+</p>
+
 ![Demo](demo.gif)
+
+</div>
 
 ## 🚀 Live App
 
