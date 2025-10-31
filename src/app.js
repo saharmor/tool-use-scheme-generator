@@ -22,6 +22,9 @@ let renderTimeoutId = null;
 // Flag to track if render is needed
 let renderPending = false;
 
+// Track last input time to detect active typing
+let lastInputTime = 0;
+
 function scheduleAutoTest() {
   if (autoTestTimeoutId) {
     clearTimeout(autoTestTimeoutId);
@@ -60,21 +63,25 @@ function isTypingInTextInput() {
  */
 function scheduleRender() {
   renderPending = true;
+  lastInputTime = Date.now(); // Track when input happened
   
   if (renderTimeoutId) {
     clearTimeout(renderTimeoutId);
   }
   
   renderTimeoutId = setTimeout(() => {
-    // Only render if not actively typing
-    if (!isTypingInTextInput()) {
+    // Check if enough time has passed since last input
+    const timeSinceLastInput = Date.now() - lastInputTime;
+    const debounceDelay = 250; // Centralized debounce delay
+    
+    if (timeSinceLastInput >= debounceDelay - 10) { // Small buffer for timing
       render();
       renderPending = false;
     } else {
-      // Reschedule if still typing
+      // Reschedule if user typed again during the wait
       scheduleRender();
     }
-  }, 150);
+  }, 350);
 }
 
 /**
@@ -87,6 +94,12 @@ function forceRender() {
   renderPending = false;
   render();
 }
+
+// Expose to window for blur event handlers
+window.forceRender = forceRender;
+Object.defineProperty(window, 'renderPending', {
+  get: () => renderPending
+});
 
 /**
  * Initialize the app
@@ -249,7 +262,7 @@ function addFunction() {
   if (!state.visited) state.visited = { functions: [] };
   state.visited.functions.push({ name: false, description: false, params: [] });
   saveState();
-  render();
+  forceRender(); // Structural change - render immediately
 }
 
 /**
@@ -262,7 +275,7 @@ function deleteFunction(funcId) {
       state.visited.functions.splice(funcId, 1);
     }
     saveState();
-    render();
+    forceRender(); // Structural change - render immediately
   }
 }
 
@@ -278,7 +291,7 @@ function duplicateFunction(funcId) {
   if (!state.visited) state.visited = { functions: [] };
   state.visited.functions.splice(funcId + 1, 0, { name: false, description: false, params: (duplicate.params || []).map(() => ({ key: false })) });
   saveState();
-  render();
+  forceRender(); // Structural change - render immediately
 }
 
 /**
@@ -311,7 +324,7 @@ function addParameter(funcId) {
   }
   state.visited.functions[funcId].params.push({ key: false });
   saveState();
-  render();
+  forceRender(); // Structural change - render immediately
 }
 
 /**
@@ -333,7 +346,7 @@ function deleteParameter(funcId, paramId) {
     state.visited.functions[funcId].params.splice(paramId, 1);
   }
   saveState();
-  render();
+  forceRender(); // Structural change - render immediately
 }
 
 /**
@@ -408,7 +421,7 @@ function confirmImport() {
       }))
     };
     saveState();
-    render();
+    forceRender(); // Structural change - render immediately
     hideImportModal();
     showToast('Successfully imported!');
   } catch (e) {
@@ -428,7 +441,7 @@ function resetAll() {
     }];
     state.visited = { functions: [{ name: false, description: false, params: [] }] };
     saveState();
-    render();
+    forceRender(); // Structural change - render immediately
     showToast('Reset complete');
   }
 }
@@ -437,16 +450,16 @@ function resetAll() {
  * Copy JSON to clipboard
  */
 async function copyJSON() {
-  // Check if all required fields were visited
-  if (!hasVisitedAllRequiredFields()) {
-    showToast('Please complete all function definitions before exporting', 'error');
-    return;
-  }
-  
   // Validate schema
   const validation = validateSchema(state.functions);
+  
   if (!validation.valid) {
-    showToast('Cannot export: Please fix validation errors first', 'error');
+    try {
+      markInvalidFields(validation.errors);
+    } catch (e) {
+      console.error('Error marking invalid fields:', e);
+    }
+    showToast('⚠ Cannot export: Please fix validation errors first', 'error');
     return;
   }
   
@@ -456,6 +469,7 @@ async function copyJSON() {
     await navigator.clipboard.writeText(text);
     showToast('Copied to clipboard!');
   } catch (e) {
+    console.error('Copy error:', e);
     showToast('Failed to copy', 'error');
   }
 }
@@ -464,16 +478,15 @@ async function copyJSON() {
  * Download JSON file
  */
 function downloadJSON() {
-  // Check if all required fields were visited
-  if (!hasVisitedAllRequiredFields()) {
-    showToast('Please complete all function definitions before exporting', 'error');
-    return;
-  }
-  
   // Validate schema
   const validation = validateSchema(state.functions);
   if (!validation.valid) {
-    showToast('Cannot export: Please fix validation errors first', 'error');
+    try {
+      markInvalidFields(validation.errors);
+    } catch (e) {
+      console.error('Error marking invalid fields:', e);
+    }
+    showToast('⚠ Cannot export: Please fix validation errors first', 'error');
     return;
   }
   
@@ -511,10 +524,10 @@ function testJSON(silentSuccess = true) {
         showToast('✓ Valid JSON schema!', 'success');
       }
     } catch (e) {
-      showToast(`✗ Invalid: ${e.message}`, 'error');
+      showToast(`⚠ Invalid: ${e.message}`, 'error');
     }
   } else {
-    showToast(`✗ Validation errors found`, 'error');
+    showToast(`⚠ Validation errors found`, 'error');
   }
 }
 
@@ -522,16 +535,15 @@ function testJSON(silentSuccess = true) {
  * Show share modal
  */
 function showShareModal() {
-  // Check if all required fields were visited
-  if (!hasVisitedAllRequiredFields()) {
-    showToast('Please complete all function definitions before sharing', 'error');
-    return;
-  }
-  
   // Validate schema
   const validation = validateSchema(state.functions);
   if (!validation.valid) {
-    showToast('Cannot share: Please fix validation errors first', 'error');
+    try {
+      markInvalidFields(validation.errors);
+    } catch (e) {
+      console.error('Error marking invalid fields:', e);
+    }
+    showToast('⚠ Cannot share: Please fix validation errors first', 'error');
     return;
   }
   
@@ -569,9 +581,12 @@ function showToast(message, type = 'info') {
   toast.textContent = message;
   toast.className = `toast toast-${type} toast-show`;
   
+  // Show error toasts for longer duration (6 seconds)
+  const duration = type === 'error' ? 6000 : 3000;
+  
   setTimeout(() => {
     toast.className = 'toast';
-  }, 3000);
+  }, duration);
 }
 
 /**
@@ -740,7 +755,7 @@ function renderValidationStatus() {
   // Show errors
   statusDiv.style.display = 'block';
   const errorList = validation.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('');
-  statusDiv.innerHTML = `<div class="status-error"><strong>Validation errors:</strong><ul>${errorList}</ul></div>`;
+  statusDiv.innerHTML = `<div class="status-error"><strong>Validation Errors</strong><ul>${errorList}</ul></div>`;
 }
 
 /**
@@ -750,6 +765,132 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Mark invalid fields based on validation errors
+ */
+function markInvalidFields(errors) {
+  try {
+    // First, clear all previous invalid markings
+    document.querySelectorAll('.invalid').forEach(el => {
+      el.classList.remove('invalid');
+    });
+    
+    // Parse errors and mark corresponding fields
+    errors.forEach(error => {
+    // Match "Function X: name is required" or "Function 1: name is required"
+    const funcIndexMatch = error.match(/Function (\d+):/);
+    if (funcIndexMatch) {
+      const funcIndex = parseInt(funcIndexMatch[1]) - 1;
+      const funcCard = document.querySelector(`[data-function-id="${funcIndex}"]`);
+      if (funcCard) {
+        if (error.includes('name is required') || error.includes('invalid name')) {
+          const nameInput = funcCard.querySelector('.function-name');
+          if (nameInput) {
+            nameInput.classList.add('invalid');
+            // Scroll to first invalid field
+            if (!document.querySelector('.invalid-scrolled')) {
+              nameInput.classList.add('invalid-scrolled');
+              nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        }
+        if (error.includes('parameter missing key')) {
+          // Mark all empty parameter keys in this function
+          const paramKeys = funcCard.querySelectorAll('.param-key');
+          paramKeys.forEach(input => {
+            if (!input.value.trim()) {
+              input.classList.add('invalid');
+            }
+          });
+        }
+        if (error.includes('duplicate parameter keys')) {
+          // Mark duplicate parameter keys
+          const paramKeys = funcCard.querySelectorAll('.param-key');
+          const keyValues = [];
+          paramKeys.forEach(input => {
+            const value = input.value.trim();
+            if (value && keyValues.includes(value)) {
+              input.classList.add('invalid');
+            }
+            if (value) keyValues.push(value);
+          });
+        }
+      }
+    }
+    
+    // Match "Function "function_name": ..." errors
+    const funcNameMatch = error.match(/Function "([^"]+)":/);
+    if (funcNameMatch) {
+      const funcName = funcNameMatch[1];
+      // Find the function by name
+      const allFuncCards = document.querySelectorAll('[data-function-id]');
+      allFuncCards.forEach(funcCard => {
+        const nameInput = funcCard.querySelector('.function-name');
+        if (nameInput && nameInput.value === funcName) {
+          if (error.includes('invalid name')) {
+            nameInput.classList.add('invalid');
+          }
+          if (error.includes('parameter missing key')) {
+            const paramKeys = funcCard.querySelectorAll('.param-key');
+            paramKeys.forEach(input => {
+              if (!input.value.trim()) {
+                input.classList.add('invalid');
+              }
+            });
+          }
+          if (error.includes('duplicate parameter keys')) {
+            const paramKeys = funcCard.querySelectorAll('.param-key');
+            const keyValues = [];
+            paramKeys.forEach(input => {
+              const value = input.value.trim();
+              if (value && keyValues.includes(value)) {
+                input.classList.add('invalid');
+              }
+              if (value) keyValues.push(value);
+            });
+          }
+        }
+      });
+    }
+    
+    // Match duplicate function names
+    if (error.includes('Duplicate function names')) {
+      const nameMatch = error.match(/Duplicate function names: (.+)/);
+      if (nameMatch) {
+        const duplicateNames = nameMatch[1].split(',').map(n => n.trim());
+        document.querySelectorAll('.function-name').forEach(input => {
+          if (duplicateNames.includes(input.value.trim())) {
+            input.classList.add('invalid');
+          }
+        });
+      }
+    }
+  });
+  
+  // Remove the scroll marker after a short delay
+  setTimeout(() => {
+    document.querySelectorAll('.invalid-scrolled').forEach(el => {
+      el.classList.remove('invalid-scrolled');
+    });
+  }, 100);
+  
+  // Clear invalid markings when user starts typing
+  setTimeout(() => {
+    document.querySelectorAll('.invalid').forEach(el => {
+      const clearInvalid = () => {
+        el.classList.remove('invalid');
+        el.removeEventListener('input', clearInvalid);
+        el.removeEventListener('change', clearInvalid);
+      };
+      el.addEventListener('input', clearInvalid);
+      el.addEventListener('change', clearInvalid);
+    });
+  }, 100);
+  } catch (e) {
+    console.error('Error in markInvalidFields:', e);
+  }
 }
 
 // Initialize on load

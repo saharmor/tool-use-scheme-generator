@@ -43,6 +43,12 @@ export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, o
     'aria-label': 'Parameter key'
   });
   keyInput.addEventListener('input', (e) => onUpdate(paramIndex, 'key', e.target.value));
+  keyInput.addEventListener('blur', () => {
+    // Trigger pending render when field loses focus
+    if (window.renderPending && typeof window.forceRender === 'function') {
+      window.forceRender();
+    }
+  });
   if (typeof onVisited === 'function') {
     keyInput.addEventListener('focus', () => onVisited(paramIndex, 'key'));
   }
@@ -70,6 +76,12 @@ export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, o
     'aria-label': 'Parameter description'
   });
   descInput.addEventListener('input', (e) => onUpdate(paramIndex, 'description', e.target.value));
+  descInput.addEventListener('blur', () => {
+    // Trigger pending render when field loses focus
+    if (window.renderPending && typeof window.forceRender === 'function') {
+      window.forceRender();
+    }
+  });
   
   const requiredCheckbox = createElement('input', {
     type: 'checkbox',
@@ -129,6 +141,12 @@ export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, on
     'aria-label': 'Function name'
   });
   nameInput.addEventListener('input', (e) => onUpdate(funcId, 'name', e.target.value));
+  nameInput.addEventListener('blur', () => {
+    // Trigger pending render when field loses focus
+    if (window.renderPending && typeof window.forceRender === 'function') {
+      window.forceRender();
+    }
+  });
   if (typeof onVisited === 'function') {
     nameInput.addEventListener('focus', () => onVisited(funcId, 'name'));
   }
@@ -165,6 +183,12 @@ export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, on
     'aria-label': 'Function description'
   });
   descInput.addEventListener('input', (e) => onUpdate(funcId, 'description', e.target.value));
+  descInput.addEventListener('blur', () => {
+    // Trigger pending render when field loses focus
+    if (window.renderPending && typeof window.forceRender === 'function') {
+      window.forceRender();
+    }
+  });
   if (typeof onVisited === 'function') {
     descInput.addEventListener('focus', () => onVisited(funcId, 'description'));
   }
