@@ -3,11 +3,18 @@
 import { generateToolsJSON, validateSchema, formatJSON } from './schema.js';
 import { parseToolsJSON } from './import.js';
 import { renderFunctions, renderAdvancedModal } from './render.js';
+import { 
+  initializeAnalytics, 
+  trackButton, 
+  trackFeature, 
+  trackError 
+} from './analytics.js';
 
 // Application state
 let state = {
   functions: [],
-  visited: { functions: [] }
+  visited: { functions: [] },
+  format: 'claude' // 'claude' or 'openai'
 };
 
 // Current advanced edit context
@@ -105,6 +112,9 @@ Object.defineProperty(window, 'renderPending', {
  * Initialize the app
  */
 function init() {
+  // Initialize Google Analytics
+  initializeAnalytics();
+  
   let shouldAutoFocus = false;
   
   // Try to load from URL hash first
@@ -115,6 +125,7 @@ function init() {
       const loaded = JSON.parse(decoded);
       state.functions = loaded.functions || [];
       showToast('Configuration loaded from URL');
+      trackFeature('share', 'load_from_url');
     } catch (e) {
       console.error('Failed to load from URL:', e);
       // Fallback to localStorage if URL parsing fails
@@ -145,6 +156,12 @@ function init() {
   
   // Setup event listeners
   setupEventListeners();
+  
+  // Set initial format in selector
+  const formatSelector = document.getElementById('schema-format-selector');
+  if (formatSelector) {
+    formatSelector.value = state.format || 'claude';
+  }
   
   // Initial render
   render();
@@ -186,6 +203,9 @@ function loadState() {
       }
       if (!state.visited) {
         state.visited = { functions: [] };
+      }
+      if (!state.format) {
+        state.format = 'claude'; // Default to Claude format
       }
       // Ensure visited structure aligns with functions
       state.functions.forEach((func, idx) => {
@@ -278,6 +298,9 @@ function setupEventListeners() {
   document.getElementById('share-btn').addEventListener('click', showShareModal);
   document.getElementById('copy-share-url-btn').addEventListener('click', copyShareURL);
   
+  // Format selector
+  document.getElementById('schema-format-selector').addEventListener('change', onFormatChange);
+  
   // Advanced modal
   document.getElementById('advanced-close-btn').addEventListener('click', hideAdvancedModal);
   
@@ -305,6 +328,7 @@ function setupEventListeners() {
  * Add new function
  */
 function addFunction() {
+  trackButton('add_function');
   state.functions.push({
     name: '',
     description: '',
@@ -325,6 +349,7 @@ function deleteFunction(funcId) {
     'Delete Function',
     'Are you sure you want to delete this function? This action cannot be undone.',
     () => {
+      trackButton('delete_function');
       state.functions.splice(funcId, 1);
       if (state.visited && state.visited.functions) {
         state.visited.functions.splice(funcId, 1);
@@ -339,6 +364,7 @@ function deleteFunction(funcId) {
  * Duplicate function
  */
 function duplicateFunction(funcId) {
+  trackButton('duplicate_function');
   const func = state.functions[funcId];
   const duplicate = JSON.parse(JSON.stringify(func));
   duplicate.name = func.name ? `${func.name}_copy` : '';
@@ -466,6 +492,7 @@ function confirmImport() {
   }
   
   try {
+    trackFeature('import', 'confirm');
     const functions = parseToolsJSON(json);
     state.functions = functions;
     // Mark imported configs as visited so validation runs immediately
@@ -493,6 +520,7 @@ function resetAll() {
     'Reset All Functions',
     'Are you sure you want to reset all functions? This will delete all your current work and cannot be undone.',
     () => {
+      trackButton('reset_all');
       state.functions = [{
         name: '',
         description: '',
@@ -510,6 +538,7 @@ function resetAll() {
  * Copy JSON to clipboard
  */
 async function copyJSON() {
+  trackButton('copy_json');
   // Validate schema
   const validation = validateSchema(state.functions);
   
@@ -519,17 +548,21 @@ async function copyJSON() {
     } catch (e) {
       console.error('Error marking invalid fields:', e);
     }
+    trackError('validation', 'copy_failed_validation');
     showToast('⚠ Cannot export: Please fix validation errors first', 'error');
     return;
   }
   
   try {
-    const json = generateToolsJSON(state.functions);
+    const json = generateToolsJSON(state.functions, state.format);
     const text = formatJSON(json);
     await navigator.clipboard.writeText(text);
+    trackFeature('export', 'copy_success', { functions_count: state.functions.length, format: state.format });
     showToast('Copied to clipboard!');
+    triggerConfetti();
   } catch (e) {
     console.error('Copy error:', e);
+    trackError('export', 'copy_failed', { error: e.message });
     showToast('Failed to copy', 'error');
   }
 }
@@ -538,6 +571,7 @@ async function copyJSON() {
  * Download JSON file
  */
 function downloadJSON() {
+  trackButton('download_json');
   // Validate schema
   const validation = validateSchema(state.functions);
   if (!validation.valid) {
@@ -546,12 +580,13 @@ function downloadJSON() {
     } catch (e) {
       console.error('Error marking invalid fields:', e);
     }
+    trackError('validation', 'download_failed_validation');
     showToast('⚠ Cannot export: Please fix validation errors first', 'error');
     return;
   }
   
   try {
-    const json = generateToolsJSON(state.functions);
+    const json = generateToolsJSON(state.functions, state.format);
     const text = formatJSON(json);
     const blob = new Blob([text], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -560,8 +595,11 @@ function downloadJSON() {
     a.download = 'tools.json';
     a.click();
     URL.revokeObjectURL(url);
+    trackFeature('export', 'download_success', { functions_count: state.functions.length, format: state.format });
     showToast('Downloaded!');
+    triggerConfetti();
   } catch (e) {
+    trackError('export', 'download_failed', { error: e.message });
     showToast('Failed to download', 'error');
   }
 }
@@ -578,7 +616,7 @@ function testJSON(silentSuccess = true) {
   
   if (validation.valid) {
     try {
-      const json = generateToolsJSON(state.functions);
+      const json = generateToolsJSON(state.functions, state.format);
       JSON.stringify(json);
       if (!silentSuccess) {
         showToast('✓ Valid JSON schema!', 'success');
@@ -595,6 +633,7 @@ function testJSON(silentSuccess = true) {
  * Show share modal
  */
 function showShareModal() {
+  trackButton('share');
   // Validate schema
   const validation = validateSchema(state.functions);
   if (!validation.valid) {
@@ -603,6 +642,7 @@ function showShareModal() {
     } catch (e) {
       console.error('Error marking invalid fields:', e);
     }
+    trackError('validation', 'share_failed_validation');
     showToast('⚠ Cannot share: Please fix validation errors first', 'error');
     return;
   }
@@ -622,6 +662,7 @@ function showShareModal() {
  * Copy share URL
  */
 async function copyShareURL() {
+  trackFeature('share', 'copy_url');
   const input = document.getElementById('share-url');
   try {
     await navigator.clipboard.writeText(input.value);
@@ -647,6 +688,47 @@ function showToast(message, type = 'info') {
   setTimeout(() => {
     toast.className = 'toast';
   }, duration);
+}
+
+/**
+ * Trigger confetti celebration effect
+ */
+function triggerConfetti() {
+  if (typeof confetti === 'undefined') return;
+  
+  const count = 200;
+  const defaults = {
+    origin: { y: 0.7 }
+  };
+
+  function fire(particleRatio, opts) {
+    confetti(Object.assign({}, defaults, opts, {
+      particleCount: Math.floor(count * particleRatio)
+    }));
+  }
+
+  fire(0.25, {
+    spread: 26,
+    startVelocity: 55,
+  });
+  fire(0.2, {
+    spread: 60,
+  });
+  fire(0.35, {
+    spread: 100,
+    decay: 0.91,
+    scalar: 0.8
+  });
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 25,
+    decay: 0.92,
+    scalar: 1.2
+  });
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 45,
+  });
 }
 
 /**
@@ -778,13 +860,24 @@ function render() {
 }
 
 /**
+ * Handle format change
+ */
+function onFormatChange(e) {
+  const newFormat = e.target.value;
+  state.format = newFormat;
+  saveState();
+  trackFeature('format', 'change', { format: newFormat });
+  forceRender();
+}
+
+/**
  * Render schema preview
  */
 function renderSchemaPreview() {
   const preview = document.getElementById('schema-preview');
   
   try {
-    const json = generateToolsJSON(state.functions);
+    const json = generateToolsJSON(state.functions, state.format);
     const formatted = formatJSON(json);
     preview.innerHTML = `<code>${escapeHtml(formatted)}</code>`;
   } catch (e) {

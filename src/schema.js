@@ -77,9 +77,51 @@ function buildPropertySchema(param) {
 }
 
 /**
+ * Generate Claude/Anthropic API tools JSON from functions array
+ */
+export function generateClaudeToolsJSON(functions) {
+  return functions.map(func => {
+    const tool = {
+      name: func.name,
+      description: func.description || ''
+    };
+    
+    // Build input_schema
+    if (func.params && func.params.length > 0) {
+      const properties = {};
+      const required = [];
+      
+      func.params.forEach(param => {
+        properties[param.key] = buildPropertySchema(param);
+        if (param.required) {
+          required.push(param.key);
+        }
+      });
+      
+      tool.input_schema = {
+        type: 'object',
+        properties
+      };
+      
+      if (required.length > 0) {
+        tool.input_schema.required = required;
+      }
+    } else {
+      // If no parameters, still include an empty input_schema
+      tool.input_schema = {
+        type: 'object',
+        properties: {}
+      };
+    }
+    
+    return tool;
+  });
+}
+
+/**
  * Generate OpenAI tools JSON from functions array
  */
-export function generateToolsJSON(functions) {
+export function generateOpenAIToolsJSON(functions) {
   return functions.map(func => {
     const tool = {
       type: 'function',
@@ -116,6 +158,16 @@ export function generateToolsJSON(functions) {
     
     return tool;
   });
+}
+
+/**
+ * Generate tools JSON based on selected format
+ */
+export function generateToolsJSON(functions, format = 'claude') {
+  if (format === 'openai') {
+    return generateOpenAIToolsJSON(functions);
+  }
+  return generateClaudeToolsJSON(functions);
 }
 
 /**

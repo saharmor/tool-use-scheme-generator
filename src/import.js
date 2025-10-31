@@ -70,25 +70,33 @@ function parsePropertySchema(key, schema, required = false) {
 }
 
 /**
- * Parse OpenAI tools JSON to internal state
+ * Detect format of tools JSON (OpenAI or Claude/Anthropic)
  */
-export function parseToolsJSON(toolsJSON) {
-  let tools;
-  
-  // Parse JSON if it's a string
-  if (typeof toolsJSON === 'string') {
-    tools = JSON.parse(toolsJSON);
-  } else {
-    tools = toolsJSON;
+function detectFormat(tools) {
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return 'unknown';
   }
   
-  // Ensure it's an array
-  if (!Array.isArray(tools)) {
-    throw new Error('Tools must be an array');
+  const firstTool = tools[0];
+  
+  // Check for OpenAI format: {type: "function", function: {...}}
+  if (firstTool.type === 'function' && firstTool.function) {
+    return 'openai';
   }
   
-  // Parse each tool
-  const functions = tools.map((tool, idx) => {
+  // Check for Claude format: {name: "...", description: "...", input_schema: {...}}
+  if (firstTool.name && firstTool.input_schema) {
+    return 'claude';
+  }
+  
+  return 'unknown';
+}
+
+/**
+ * Parse OpenAI format tools JSON to internal state
+ */
+function parseOpenAIFormat(tools) {
+  return tools.map((tool, idx) => {
     if (tool.type !== 'function') {
       throw new Error(`Tool ${idx}: type must be "function"`);
     }
@@ -117,8 +125,68 @@ export function parseToolsJSON(toolsJSON) {
     
     return func;
   });
+}
+
+/**
+ * Parse Claude/Anthropic format tools JSON to internal state
+ */
+function parseClaudeFormat(tools) {
+  return tools.map((tool, idx) => {
+    if (!tool.name) {
+      throw new Error(`Tool ${idx}: missing "name" property`);
+    }
+    
+    const func = {
+      name: tool.name || '',
+      description: tool.description || '',
+      params: []
+    };
+    
+    // Parse input_schema
+    if (tool.input_schema) {
+      const schema = tool.input_schema;
+      const required = schema.required || [];
+      
+      if (schema.properties) {
+        for (const [key, propSchema] of Object.entries(schema.properties)) {
+          func.params.push(parsePropertySchema(key, propSchema, required.includes(key)));
+        }
+      }
+    }
+    
+    return func;
+  });
+}
+
+/**
+ * Parse tools JSON (auto-detects OpenAI or Claude format)
+ */
+export function parseToolsJSON(toolsJSON) {
+  let tools;
   
-  return functions;
+  // Parse JSON if it's a string
+  if (typeof toolsJSON === 'string') {
+    tools = JSON.parse(toolsJSON);
+  } else {
+    tools = toolsJSON;
+  }
+  
+  // Ensure it's an array
+  if (!Array.isArray(tools)) {
+    throw new Error('Tools must be an array');
+  }
+  
+  // Detect format
+  const format = detectFormat(tools);
+  
+  // Parse based on format
+  if (format === 'openai') {
+    return parseOpenAIFormat(tools);
+  } else if (format === 'claude') {
+    return parseClaudeFormat(tools);
+  } else {
+    throw new Error('Unknown tool format. Expected OpenAI or Claude/Anthropic format.');
+  }
 }
 
 /**

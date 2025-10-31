@@ -1,52 +1,49 @@
 [
   {
-    "type": "function",
-    "function": {
-      "name": "create_user",
-      "description": "Create a new user account with profile information",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string",
-            "description": "Unique username",
-            "pattern": "^[a-zA-Z0-9_]{3,20}$",
-            "minLength": 3,
-            "maxLength": 20
-          },
-          "email": {
-            "type": "string",
-            "description": "User email address",
-            "pattern": "^[^@]+@[^@]+\\.[^@]+$"
-          },
-          "profile": {
-            "type": "object",
-            "description": "User profile details",
-            "properties": {
-              "first_name": {
-                "type": "string",
-                "description": "First name"
-              },
-              "last_name": {
-                "type": "string",
-                "description": "Last name"
-              },
-              "age": {
-                "type": "integer",
-                "description": "User age",
-                "minimum": 13,
-                "maximum": 120
-              },
-              "verified": {
-                "type": "boolean",
-                "description": "Email verification status"
-              }
-            },
-            "required": ["first_name", "last_name"]
-          }
+    "name": "create_user",
+    "description": "Create a new user account with profile information",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Unique username",
+          "pattern": "^[a-zA-Z0-9_]{3,20}$",
+          "minLength": 3,
+          "maxLength": 20
         },
-        "required": ["username", "email", "profile"]
-      }
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "pattern": "^[^@]+@[^@]+\\.[^@]+$"
+        },
+        "profile": {
+          "type": "object",
+          "description": "User profile details",
+          "properties": {
+            "first_name": {
+              "type": "string",
+              "description": "First name"
+            },
+            "last_name": {
+              "type": "string",
+              "description": "Last name"
+            },
+            "age": {
+              "type": "integer",
+              "description": "User age",
+              "minimum": 13,
+              "maximum": 120
+            },
+            "verified": {
+              "type": "boolean",
+              "description": "Email verification status"
+            }
+          },
+          "required": ["first_name", "last_name"]
+        }
+      },
+      "required": ["username", "email", "profile"]
     }
   }
 ]

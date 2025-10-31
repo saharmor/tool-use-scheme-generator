@@ -2,7 +2,7 @@
 
 # ✨ Tool Calls Schema Generator
 
-A lightweight, static web app for generating valid OpenAI "tools" JSON schemas. Define functions and parameters with advanced validation options, then copy, download, import, or share your configurations.
+A lightweight, static web app for generating valid tool use JSON schemas for **Claude (Anthropic)** and **OpenAI**. Define functions and parameters with advanced validation options, then copy, download, import, or share your configurations.
 
 <p>
 <a href="https://www.linkedin.com/in/sahar-mor/" target="_blank"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue" alt="LinkedIn"></a>
@@ -23,12 +23,15 @@ A lightweight, static web app for generating valid OpenAI "tools" JSON schemas. 
 
 ## Features
 
+- **Multi-Format Support**: Generate schemas for both Claude/Anthropic and OpenAI formats
+- **Format Selector**: Easily switch between Claude and OpenAI output formats
 - **Live JSON Preview**: Real-time visualization of your schema
 - **Validation**: Inline validation with helpful error messages
+- **Smart Import**: Auto-detects and imports both Claude and OpenAI formats
 - **Actions**:
   - Copy JSON to clipboard
   - Download as `tools.json`
-  - Import existing JSON schemas
+  - Import existing JSON schemas (both formats)
   - Share via URL (base64-encoded state)
   - Reset all
 - **Persistence**: Auto-save to localStorage
@@ -54,11 +57,49 @@ Click **"Advanced"** for additional constraints like enum values, min/max, patte
 
 ### Working with the Schema
 
+- **Format Selection**: Use the dropdown in the preview panel to choose between Claude/Anthropic or OpenAI format
 - **Copy**: Click "Copy" to copy the JSON to your clipboard
 - **Download**: Save as `tools.json`
-- **Import**: Paste an existing tools JSON array to edit
+- **Import**: Paste an existing tools JSON array (either format) to edit
 - **Share**: Generate a shareable URL with your configuration
-- **Test**: Validate your schema for errors
+- **Validation**: Automatic validation with helpful error messages
+
+### Using with Claude (Anthropic)
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(api_key="your-api-key")
+
+tools = [
+  {
+    "name": "get_weather",
+    "description": "Get the current weather in a given location",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "The city and country, e.g. Berlin, Germany"
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["celsius", "fahrenheit"],
+          "description": "Temperature unit"
+        }
+      },
+      "required": ["location"]
+    }
+  }
+]
+
+response = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    tools=tools,
+    messages=[{"role": "user", "content": "What's the weather in Berlin?"}]
+)
+```
 
 ### Using with OpenAI
 
@@ -100,10 +141,22 @@ const response = await client.chat.completions.create({
 
 ## Sample Schemas
 
-Check the `/samples` directory for example schemas:
+Check the `/samples` directory for example schemas (Claude/Anthropic format):
 - `weather.json` - Simple function with enum
 - `array.json` - Array parameters with constraints
 - `nested-object.json` - Object with nested properties
 - `multi-tools.json` - Multiple functions in one schema
+
+All samples use the Claude/Anthropic format. The tool auto-detects format when importing and can export to either format.
+
+## Analytics Setup
+
+This project includes Google Analytics 4 (GA4) integration. To enable analytics tracking:
+
+1. Get your GA4 Measurement ID from Google Analytics
+2. Update the ID in `index.html` and `src/analytics.js`
+3. See [ANALYTICS_SETUP.md](./ANALYTICS_SETUP.md) for detailed configuration instructions
+
+The implementation tracks user interactions (button clicks, exports, imports, errors) while respecting user privacy with opt-out capabilities.
 
 ---

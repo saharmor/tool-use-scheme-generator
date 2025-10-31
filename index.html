@@ -10,7 +10,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles/main.css">
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LB83NK9ZKE"></script>
+  
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
   <header>
@@ -48,6 +53,10 @@
         <div class="panel-header">
           <h2>Final Schema</h2>
           <div class="action-buttons">
+            <select id="schema-format-selector" class="format-selector" aria-label="Select schema format" title="Schema Format">
+              <option value="claude">Anthropic</option>
+              <option value="openai">OpenAI</option>
+            </select>
             <button id="share-btn" class="btn btn-icon" aria-label="Share" title="Share"><i data-lucide="share"></i></button>
             <button id="copy-btn" class="btn btn-icon" aria-label="Copy JSON" title="Copy"><i data-lucide="copy"></i></button>
             <button id="download-btn" class="btn btn-icon" aria-label="Download" title="Download"><i data-lucide="download"></i></button>

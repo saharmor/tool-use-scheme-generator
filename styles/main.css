@@ -323,6 +323,30 @@ main {
   background: var(--primary-hover);
 }
 
+/* Format Selector */
+.format-selector {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  margin-right: 0.5rem;
+}
+
+.format-selector:hover {
+  background: var(--bg-gray);
+  border-color: var(--primary);
+}
+
+.format-selector:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn-danger {
   background: var(--danger);
   color: white;
