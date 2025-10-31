@@ -25,7 +25,7 @@
         </svg>
         <h1 class="gradient-title">Tool Calls Schema Generator</h1>
       </div>
-      <p class="subtitle">Generate valid OpenAI tools JSON schema</p>
+      <p class="subtitle">Generate valid OpenAI/Anthropic tools use JSON schema</p>
     </div>
   </header>
 
@@ -107,10 +107,27 @@
     </div>
   </div>
 
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" class="modal" role="dialog" aria-labelledby="confirm-title" aria-modal="true" hidden>
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h3 id="confirm-title"></h3>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-ok-btn" class="btn btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <footer class="site-footer">
-    <p>Created by <a href="https://www.linkedin.com/in/sahar-mor/" target="_blank" rel="noopener noreferrer">Sahar</a></p>
+    🌉 Created by <a href="https://www.linkedin.com/in/sahar-mor/" target="_blank" rel="noopener noreferrer">Sahar</a>
   </footer>
 
   <script>

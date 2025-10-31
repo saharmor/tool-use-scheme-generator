@@ -105,6 +105,8 @@ Object.defineProperty(window, 'renderPending', {
  * Initialize the app
  */
 function init() {
+  let shouldAutoFocus = false;
+  
   // Try to load from URL hash first
   if (window.location.hash) {
     try {
@@ -125,7 +127,7 @@ function init() {
   
   // If no functions exist, add an empty one for better UX
   if (state.functions.length === 0) {
-    console.log('No functions found, adding empty function for better UX');
+
     state.functions.push({
       name: '',
       description: '',
@@ -134,19 +136,28 @@ function init() {
     // Save the initial state
     try {
       localStorage.setItem('tool-schema-state', JSON.stringify(state));
-      console.log('Initial empty function saved to localStorage');
     } catch (e) {
       console.error('Failed to save initial state:', e);
     }
+    shouldAutoFocus = true;
   }
   
-  console.log('Initializing with', state.functions.length, 'function(s)');
   
   // Setup event listeners
   setupEventListeners();
   
   // Initial render
   render();
+  
+  // Auto-focus the first function name field if starting fresh
+  if (shouldAutoFocus) {
+    requestAnimationFrame(() => {
+      const firstFunctionNameInput = document.querySelector('.function-name');
+      if (firstFunctionNameInput) {
+        firstFunctionNameInput.focus();
+      }
+    });
+  }
 }
 
 /**
@@ -196,6 +207,47 @@ function loadState() {
     console.error('Failed to load state:', e);
     state = { functions: [], visited: { functions: [] } };
   }
+}
+
+/**
+ * Show confirmation modal
+ */
+function showConfirmModal(title, message, onConfirm) {
+  const modal = document.getElementById('confirm-modal');
+  const titleElement = document.getElementById('confirm-title');
+  const messageElement = document.getElementById('confirm-message');
+  const okBtn = document.getElementById('confirm-ok-btn');
+  const cancelBtn = document.getElementById('confirm-cancel-btn');
+  
+  titleElement.textContent = title;
+  messageElement.textContent = message;
+  
+  // Remove old event listeners by cloning buttons
+  const newOkBtn = okBtn.cloneNode(true);
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  
+  // Add new event listeners
+  newOkBtn.addEventListener('click', () => {
+    modal.hidden = true;
+    onConfirm();
+  });
+  
+  newCancelBtn.addEventListener('click', () => {
+    modal.hidden = true;
+  });
+  
+  // Close on modal background click
+  const handleBackgroundClick = (e) => {
+    if (e.target === modal) {
+      modal.hidden = true;
+      modal.removeEventListener('click', handleBackgroundClick);
+    }
+  };
+  modal.addEventListener('click', handleBackgroundClick);
+  
+  modal.hidden = false;
 }
 
 /**
@@ -269,14 +321,18 @@ function addFunction() {
  * Delete function
  */
 function deleteFunction(funcId) {
-  if (confirm('Delete this function?')) {
-    state.functions.splice(funcId, 1);
-    if (state.visited && state.visited.functions) {
-      state.visited.functions.splice(funcId, 1);
+  showConfirmModal(
+    'Delete Function',
+    'Are you sure you want to delete this function? This action cannot be undone.',
+    () => {
+      state.functions.splice(funcId, 1);
+      if (state.visited && state.visited.functions) {
+        state.visited.functions.splice(funcId, 1);
+      }
+      saveState();
+      forceRender(); // Structural change - render immediately
     }
-    saveState();
-    forceRender(); // Structural change - render immediately
-  }
+  );
 }
 
 /**
@@ -433,17 +489,21 @@ function confirmImport() {
  * Reset all
  */
 function resetAll() {
-  if (confirm('Reset all functions? This cannot be undone.')) {
-    state.functions = [{
-      name: '',
-      description: '',
-      params: []
-    }];
-    state.visited = { functions: [{ name: false, description: false, params: [] }] };
-    saveState();
-    forceRender(); // Structural change - render immediately
-    showToast('Reset complete');
-  }
+  showConfirmModal(
+    'Reset All Functions',
+    'Are you sure you want to reset all functions? This will delete all your current work and cannot be undone.',
+    () => {
+      state.functions = [{
+        name: '',
+        description: '',
+        params: []
+      }];
+      state.visited = { functions: [{ name: false, description: false, params: [] }] };
+      saveState();
+      forceRender(); // Structural change - render immediately
+      showToast('Reset complete');
+    }
+  );
 }
 
 /**
