@@ -32,7 +32,7 @@ export function createElement(tag, attributes = {}, children = []) {
 /**
  * Render a single parameter row
  */
-export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, onAdvanced) {
+export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, onAdvanced, onVisited) {
   const row = createElement('div', { className: 'param-row', 'data-param-index': paramIndex });
   
   const keyInput = createElement('input', {
@@ -43,6 +43,9 @@ export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, o
     'aria-label': 'Parameter key'
   });
   keyInput.addEventListener('input', (e) => onUpdate(paramIndex, 'key', e.target.value));
+  if (typeof onVisited === 'function') {
+    keyInput.addEventListener('focus', () => onVisited(paramIndex, 'key'));
+  }
   
   const typeSelect = createElement('select', {
     className: 'param-type',
@@ -83,16 +86,18 @@ export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, o
   
   const advancedBtn = createElement('button', {
     type: 'button',
-    className: 'btn btn-small',
-    'aria-label': 'Advanced options'
-  }, ['Advanced']);
+    className: 'btn btn-small btn-icon',
+    'aria-label': 'Advanced options',
+    title: 'Advanced options'
+  }, [createElement('i', { 'data-lucide': 'settings' })]);
   advancedBtn.addEventListener('click', () => onAdvanced(funcId, paramIndex));
   
   const deleteBtn = createElement('button', {
     type: 'button',
-    className: 'btn btn-danger btn-small',
-    'aria-label': 'Delete parameter'
-  }, ['×']);
+    className: 'btn btn-danger btn-small btn-icon',
+    'aria-label': 'Delete parameter',
+    title: 'Delete parameter'
+  }, [createElement('i', { 'data-lucide': 'x' })]);
   deleteBtn.addEventListener('click', () => onDelete(paramIndex));
   
   row.appendChild(keyInput);
@@ -108,7 +113,7 @@ export function renderParameter(param, funcId, paramIndex, onUpdate, onDelete, o
 /**
  * Render function card
  */
-export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, onParamAdd, onParamUpdate, onParamDelete, onParamAdvanced) {
+export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, onParamAdd, onParamUpdate, onParamDelete, onParamAdvanced, onVisited, onParamVisited) {
   const card = createElement('div', {
     className: 'function-card',
     'data-function-id': funcId
@@ -124,21 +129,26 @@ export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, on
     'aria-label': 'Function name'
   });
   nameInput.addEventListener('input', (e) => onUpdate(funcId, 'name', e.target.value));
+  if (typeof onVisited === 'function') {
+    nameInput.addEventListener('focus', () => onVisited(funcId, 'name'));
+  }
   
   const actions = createElement('div', { className: 'function-actions' });
   
   const duplicateBtn = createElement('button', {
     type: 'button',
-    className: 'btn btn-small',
-    'aria-label': 'Duplicate function'
-  }, ['Duplicate']);
+    className: 'btn btn-small btn-icon',
+    'aria-label': 'Duplicate function',
+    title: 'Duplicate'
+  }, [createElement('i', { 'data-lucide': 'copy' })]);
   duplicateBtn.addEventListener('click', () => onDuplicate(funcId));
   
   const deleteBtn = createElement('button', {
     type: 'button',
-    className: 'btn btn-danger btn-small',
-    'aria-label': 'Delete function'
-  }, ['Delete']);
+    className: 'btn btn-danger btn-small btn-icon',
+    'aria-label': 'Delete function',
+    title: 'Delete'
+  }, [createElement('i', { 'data-lucide': 'trash' })]);
   deleteBtn.addEventListener('click', () => onDelete(funcId));
   
   actions.appendChild(duplicateBtn);
@@ -155,14 +165,18 @@ export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, on
     'aria-label': 'Function description'
   });
   descInput.addEventListener('input', (e) => onUpdate(funcId, 'description', e.target.value));
+  if (typeof onVisited === 'function') {
+    descInput.addEventListener('focus', () => onVisited(funcId, 'description'));
+  }
   
   const paramsHeader = createElement('div', { className: 'params-header' });
   const paramsTitle = createElement('h4', {}, ['Parameters']);
   const addParamBtn = createElement('button', {
     type: 'button',
-    className: 'btn btn-small btn-primary',
-    'aria-label': 'Add parameter'
-  }, ['+ Add Parameter']);
+    className: 'btn btn-small btn-primary btn-icon',
+    'aria-label': 'Add parameter',
+    title: 'Add parameter'
+  }, [createElement('i', { 'data-lucide': 'plus' })]);
   addParamBtn.addEventListener('click', () => onParamAdd(funcId));
   
   paramsHeader.appendChild(paramsTitle);
@@ -178,7 +192,12 @@ export function renderFunction(func, funcId, onUpdate, onDelete, onDuplicate, on
         idx,
         (paramIdx, field, value) => onParamUpdate(funcId, paramIdx, field, value),
         (paramIdx) => onParamDelete(funcId, paramIdx),
-        onParamAdvanced
+        onParamAdvanced,
+        (paramIdx, field) => {
+          if (typeof onParamVisited === 'function') {
+            onParamVisited(funcId, paramIdx, field);
+          }
+        }
       );
       paramsList.appendChild(paramRow);
     });
@@ -220,7 +239,9 @@ export function renderFunctions(functions, handlers) {
       handlers.onParamAdd,
       handlers.onParamUpdate,
       handlers.onParamDelete,
-      handlers.onParamAdvanced
+      handlers.onParamAdvanced,
+      handlers.onVisited,
+      handlers.onParamVisited
     );
     container.appendChild(funcCard);
   });
@@ -472,8 +493,10 @@ export function renderAdvancedModal(param, onUpdate) {
     
     const addPropBtn = createElement('button', {
       type: 'button',
-      className: 'btn btn-small btn-primary'
-    }, ['+ Add Property']);
+      className: 'btn btn-small btn-primary btn-icon',
+      title: 'Add property',
+      'aria-label': 'Add property'
+    }, [createElement('i', { 'data-lucide': 'plus' })]);
     
     addPropBtn.addEventListener('click', () => {
       const props = param.properties || {};

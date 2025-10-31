@@ -6,11 +6,87 @@ import { renderFunctions, renderAdvancedModal } from './render.js';
 
 // Application state
 let state = {
-  functions: []
+  functions: [],
+  visited: { functions: [] }
 };
 
 // Current advanced edit context
 let advancedEditContext = null;
+
+// Debounced auto-test timer
+let autoTestTimeoutId = null;
+
+// Debounced render timer
+let renderTimeoutId = null;
+
+// Flag to track if render is needed
+let renderPending = false;
+
+function scheduleAutoTest() {
+  if (autoTestTimeoutId) {
+    clearTimeout(autoTestTimeoutId);
+  }
+  autoTestTimeoutId = setTimeout(() => {
+    try {
+      testJSON(true); // silent success
+    } catch (_) {
+      // no-op
+    }
+  }, 1000);
+}
+
+/**
+ * Check if user is currently typing in a text input
+ */
+function isTypingInTextInput() {
+  const activeElement = document.activeElement;
+  if (!activeElement) return false;
+  
+  // Check if focused element is a text input field
+  const isTextInput = (
+    activeElement.tagName === 'INPUT' && activeElement.type === 'text'
+  ) || activeElement.tagName === 'TEXTAREA';
+  
+  return isTextInput && (
+    activeElement.classList.contains('function-name') ||
+    activeElement.classList.contains('function-description') ||
+    activeElement.classList.contains('param-key') ||
+    activeElement.classList.contains('param-description')
+  );
+}
+
+/**
+ * Schedule a debounced render
+ */
+function scheduleRender() {
+  renderPending = true;
+  
+  if (renderTimeoutId) {
+    clearTimeout(renderTimeoutId);
+  }
+  
+  renderTimeoutId = setTimeout(() => {
+    // Only render if not actively typing
+    if (!isTypingInTextInput()) {
+      render();
+      renderPending = false;
+    } else {
+      // Reschedule if still typing
+      scheduleRender();
+    }
+  }, 150);
+}
+
+/**
+ * Force render (for structural changes)
+ */
+function forceRender() {
+  if (renderTimeoutId) {
+    clearTimeout(renderTimeoutId);
+  }
+  renderPending = false;
+  render();
+}
 
 /**
  * Initialize the app
@@ -26,11 +102,32 @@ function init() {
       showToast('Configuration loaded from URL');
     } catch (e) {
       console.error('Failed to load from URL:', e);
+      // Fallback to localStorage if URL parsing fails
+      loadState();
     }
   } else {
     // Load from localStorage
     loadState();
   }
+  
+  // If no functions exist, add an empty one for better UX
+  if (state.functions.length === 0) {
+    console.log('No functions found, adding empty function for better UX');
+    state.functions.push({
+      name: '',
+      description: '',
+      params: []
+    });
+    // Save the initial state
+    try {
+      localStorage.setItem('tool-schema-state', JSON.stringify(state));
+      console.log('Initial empty function saved to localStorage');
+    } catch (e) {
+      console.error('Failed to save initial state:', e);
+    }
+  }
+  
+  console.log('Initializing with', state.functions.length, 'function(s)');
   
   // Setup event listeners
   setupEventListeners();
@@ -48,6 +145,8 @@ function saveState() {
   } catch (e) {
     console.error('Failed to save state:', e);
   }
+  // Always run validation shortly after changes
+  scheduleAutoTest();
 }
 
 /**
@@ -61,10 +160,28 @@ function loadState() {
       if (!state.functions) {
         state.functions = [];
       }
+      if (!state.visited) {
+        state.visited = { functions: [] };
+      }
+      // Ensure visited structure aligns with functions
+      state.functions.forEach((func, idx) => {
+        if (!state.visited.functions[idx]) {
+          state.visited.functions[idx] = { name: false, description: false, params: [] };
+        }
+        const paramsCount = (func.params || []).length;
+        if (!Array.isArray(state.visited.functions[idx].params)) {
+          state.visited.functions[idx].params = [];
+        }
+        // Expand or trim param visited to match count
+        state.visited.functions[idx].params = Array.from({ length: paramsCount }, (_, pIdx) => {
+          const existing = state.visited.functions[idx].params[pIdx];
+          return existing ? existing : { key: false };
+        });
+      });
     }
   } catch (e) {
     console.error('Failed to load state:', e);
-    state = { functions: [] };
+    state = { functions: [], visited: { functions: [] } };
   }
 }
 
@@ -90,7 +207,7 @@ function setupEventListeners() {
   document.getElementById('download-btn').addEventListener('click', downloadJSON);
   
   // Test
-  document.getElementById('test-btn').addEventListener('click', testJSON);
+  // (Removed Test button; validation now runs automatically.)
   
   // Share
   document.getElementById('share-btn').addEventListener('click', showShareModal);
@@ -128,6 +245,9 @@ function addFunction() {
     description: '',
     params: []
   });
+  // Initialize visited for the new function
+  if (!state.visited) state.visited = { functions: [] };
+  state.visited.functions.push({ name: false, description: false, params: [] });
   saveState();
   render();
 }
@@ -138,6 +258,9 @@ function addFunction() {
 function deleteFunction(funcId) {
   if (confirm('Delete this function?')) {
     state.functions.splice(funcId, 1);
+    if (state.visited && state.visited.functions) {
+      state.visited.functions.splice(funcId, 1);
+    }
     saveState();
     render();
   }
@@ -151,6 +274,9 @@ function duplicateFunction(funcId) {
   const duplicate = JSON.parse(JSON.stringify(func));
   duplicate.name = func.name ? `${func.name}_copy` : '';
   state.functions.splice(funcId + 1, 0, duplicate);
+  // Initialize visited for duplicate (require user to visit fields)
+  if (!state.visited) state.visited = { functions: [] };
+  state.visited.functions.splice(funcId + 1, 0, { name: false, description: false, params: (duplicate.params || []).map(() => ({ key: false })) });
   saveState();
   render();
 }
@@ -161,7 +287,8 @@ function duplicateFunction(funcId) {
 function updateFunction(funcId, field, value) {
   state.functions[funcId][field] = value;
   saveState();
-  render();
+  // Debounce render for text input changes to avoid focus flickering
+  scheduleRender();
 }
 
 /**
@@ -177,6 +304,12 @@ function addParameter(funcId) {
     description: '',
     required: false
   });
+  // Initialize visited for new parameter key
+  if (!state.visited) state.visited = { functions: [] };
+  if (!state.visited.functions[funcId]) {
+    state.visited.functions[funcId] = { name: false, description: false, params: [] };
+  }
+  state.visited.functions[funcId].params.push({ key: false });
   saveState();
   render();
 }
@@ -187,7 +320,8 @@ function addParameter(funcId) {
 function updateParameter(funcId, paramId, field, value) {
   state.functions[funcId].params[paramId][field] = value;
   saveState();
-  render();
+  // Debounce render for text input changes to avoid focus flickering
+  scheduleRender();
 }
 
 /**
@@ -195,6 +329,9 @@ function updateParameter(funcId, paramId, field, value) {
  */
 function deleteParameter(funcId, paramId) {
   state.functions[funcId].params.splice(paramId, 1);
+  if (state.visited && state.visited.functions && state.visited.functions[funcId] && state.visited.functions[funcId].params) {
+    state.visited.functions[funcId].params.splice(paramId, 1);
+  }
   saveState();
   render();
 }
@@ -209,12 +346,12 @@ function showAdvancedOptions(funcId, paramId) {
   renderAdvancedModal(param, (field, value) => {
     state.functions[funcId].params[paramId][field] = value;
     saveState();
-    render();
+    scheduleRender();
     // Re-render the advanced modal with updated values
     renderAdvancedModal(state.functions[funcId].params[paramId], (f, v) => {
       state.functions[funcId].params[paramId][f] = v;
       saveState();
-      render();
+      scheduleRender();
       renderAdvancedModal(state.functions[funcId].params[paramId], arguments.callee);
     });
   });
@@ -262,6 +399,14 @@ function confirmImport() {
   try {
     const functions = parseToolsJSON(json);
     state.functions = functions;
+    // Mark imported configs as visited so validation runs immediately
+    state.visited = {
+      functions: (functions || []).map(f => ({
+        name: true,
+        description: true,
+        params: (f.params || []).map(() => ({ key: true }))
+      }))
+    };
     saveState();
     render();
     hideImportModal();
@@ -276,7 +421,12 @@ function confirmImport() {
  */
 function resetAll() {
   if (confirm('Reset all functions? This cannot be undone.')) {
-    state.functions = [];
+    state.functions = [{
+      name: '',
+      description: '',
+      params: []
+    }];
+    state.visited = { functions: [{ name: false, description: false, params: [] }] };
     saveState();
     render();
     showToast('Reset complete');
@@ -287,6 +437,19 @@ function resetAll() {
  * Copy JSON to clipboard
  */
 async function copyJSON() {
+  // Check if all required fields were visited
+  if (!hasVisitedAllRequiredFields()) {
+    showToast('Please complete all function definitions before exporting', 'error');
+    return;
+  }
+  
+  // Validate schema
+  const validation = validateSchema(state.functions);
+  if (!validation.valid) {
+    showToast('Cannot export: Please fix validation errors first', 'error');
+    return;
+  }
+  
   try {
     const json = generateToolsJSON(state.functions);
     const text = formatJSON(json);
@@ -301,6 +464,19 @@ async function copyJSON() {
  * Download JSON file
  */
 function downloadJSON() {
+  // Check if all required fields were visited
+  if (!hasVisitedAllRequiredFields()) {
+    showToast('Please complete all function definitions before exporting', 'error');
+    return;
+  }
+  
+  // Validate schema
+  const validation = validateSchema(state.functions);
+  if (!validation.valid) {
+    showToast('Cannot export: Please fix validation errors first', 'error');
+    return;
+  }
+  
   try {
     const json = generateToolsJSON(state.functions);
     const text = formatJSON(json);
@@ -320,14 +496,20 @@ function downloadJSON() {
 /**
  * Test JSON validity
  */
-function testJSON() {
+function testJSON(silentSuccess = true) {
+  // Do not validate until all required fields were visited
+  if (!hasVisitedAllRequiredFields()) {
+    return;
+  }
   const validation = validateSchema(state.functions);
   
   if (validation.valid) {
     try {
       const json = generateToolsJSON(state.functions);
       JSON.stringify(json);
-      showToast('✓ Valid JSON schema!', 'success');
+      if (!silentSuccess) {
+        showToast('✓ Valid JSON schema!', 'success');
+      }
     } catch (e) {
       showToast(`✗ Invalid: ${e.message}`, 'error');
     }
@@ -340,6 +522,19 @@ function testJSON() {
  * Show share modal
  */
 function showShareModal() {
+  // Check if all required fields were visited
+  if (!hasVisitedAllRequiredFields()) {
+    showToast('Please complete all function definitions before sharing', 'error');
+    return;
+  }
+  
+  // Validate schema
+  const validation = validateSchema(state.functions);
+  if (!validation.valid) {
+    showToast('Cannot share: Please fix validation errors first', 'error');
+    return;
+  }
+  
   try {
     const encoded = btoa(JSON.stringify(state));
     const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
@@ -380,9 +575,103 @@ function showToast(message, type = 'info') {
 }
 
 /**
+ * Preserve focus state before re-rendering
+ */
+function preserveFocus() {
+  const activeElement = document.activeElement;
+  if (!activeElement) return null;
+  
+  // Check if it's a function description textarea
+  if (activeElement.classList.contains('function-description')) {
+    const funcCard = activeElement.closest('[data-function-id]');
+    if (funcCard) {
+      const funcId = parseInt(funcCard.getAttribute('data-function-id'));
+      return {
+        type: 'function-description',
+        funcId: funcId,
+        selectionStart: activeElement.selectionStart,
+        selectionEnd: activeElement.selectionEnd
+      };
+    }
+  }
+  
+  // Check if it's a function name input
+  if (activeElement.classList.contains('function-name')) {
+    const funcCard = activeElement.closest('[data-function-id]');
+    if (funcCard) {
+      const funcId = parseInt(funcCard.getAttribute('data-function-id'));
+      return {
+        type: 'function-name',
+        funcId: funcId,
+        selectionStart: activeElement.selectionStart,
+        selectionEnd: activeElement.selectionEnd
+      };
+    }
+  }
+  
+  // Check if it's a parameter field
+  if (activeElement.classList.contains('param-key') || 
+      activeElement.classList.contains('param-description')) {
+    const paramRow = activeElement.closest('[data-param-index]');
+    const funcCard = activeElement.closest('[data-function-id]');
+    if (paramRow && funcCard) {
+      const paramIndex = parseInt(paramRow.getAttribute('data-param-index'));
+      const funcId = parseInt(funcCard.getAttribute('data-function-id'));
+      return {
+        type: activeElement.classList.contains('param-key') ? 'param-key' : 'param-description',
+        funcId: funcId,
+        paramIndex: paramIndex,
+        selectionStart: activeElement.selectionStart,
+        selectionEnd: activeElement.selectionEnd
+      };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Restore focus state after re-rendering
+ */
+function restoreFocus(focusState) {
+  if (!focusState) return;
+  
+  // Use double requestAnimationFrame to ensure DOM is fully updated
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const funcCard = document.querySelector(`[data-function-id="${focusState.funcId}"]`);
+      if (!funcCard) return;
+      
+      let element = null;
+      
+      if (focusState.type === 'function-description') {
+        element = funcCard.querySelector('.function-description');
+      } else if (focusState.type === 'function-name') {
+        element = funcCard.querySelector('.function-name');
+      } else if (focusState.type === 'param-key' || focusState.type === 'param-description') {
+        const paramRows = funcCard.querySelectorAll('[data-param-index]');
+        if (paramRows[focusState.paramIndex]) {
+          element = paramRows[focusState.paramIndex].querySelector(`.${focusState.type}`);
+        }
+      }
+      
+      if (element && typeof element.focus === 'function') {
+        element.focus();
+        if (element.setSelectionRange && typeof focusState.selectionStart === 'number') {
+          element.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+        }
+      }
+    });
+  });
+}
+
+/**
  * Render everything
  */
 function render() {
+  // Preserve focus before re-rendering
+  const focusState = preserveFocus();
+  
   // Render functions
   renderFunctions(state.functions, {
     onFunctionUpdate: updateFunction,
@@ -391,7 +680,9 @@ function render() {
     onParamAdd: addParameter,
     onParamUpdate: updateParameter,
     onParamDelete: deleteParameter,
-    onParamAdvanced: showAdvancedOptions
+    onParamAdvanced: showAdvancedOptions,
+    onVisited: markVisited,
+    onParamVisited: markParamVisited
   });
   
   // Render schema preview
@@ -399,6 +690,16 @@ function render() {
   
   // Render validation status
   renderValidationStatus();
+
+  // Restore focus after re-rendering
+  restoreFocus(focusState);
+
+  // Refresh icons from icon library (with small delay to ensure DOM updates)
+  requestAnimationFrame(() => {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  });
 }
 
 /**
@@ -421,19 +722,25 @@ function renderSchemaPreview() {
  */
 function renderValidationStatus() {
   const statusDiv = document.getElementById('validation-status');
+  // Hide validation until all required fields were visited
+  if (!hasVisitedAllRequiredFields()) {
+    statusDiv.innerHTML = '';
+    statusDiv.style.display = 'none';
+    return;
+  }
   const validation = validateSchema(state.functions);
   
-  if (state.functions.length === 0) {
+  // Only show validation status when there are errors
+  if (state.functions.length === 0 || validation.valid) {
     statusDiv.innerHTML = '';
+    statusDiv.style.display = 'none';
     return;
   }
   
-  if (validation.valid) {
-    statusDiv.innerHTML = '<span class="status-success">✓ Valid schema</span>';
-  } else {
-    const errorList = validation.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('');
-    statusDiv.innerHTML = `<div class="status-error"><strong>Validation errors:</strong><ul>${errorList}</ul></div>`;
-  }
+  // Show errors
+  statusDiv.style.display = 'block';
+  const errorList = validation.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('');
+  statusDiv.innerHTML = `<div class="status-error"><strong>Validation errors:</strong><ul>${errorList}</ul></div>`;
 }
 
 /**
@@ -450,5 +757,58 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+// Visited tracking utilities
+function markVisited(funcId, field) {
+  if (!state.visited) state.visited = { functions: [] };
+  if (!state.visited.functions[funcId]) {
+    state.visited.functions[funcId] = { name: false, description: false, params: [] };
+  }
+  if (field === 'name' || field === 'description') {
+    if (!state.visited.functions[funcId][field]) {
+      state.visited.functions[funcId][field] = true;
+      saveState();
+      renderValidationStatus();
+    }
+  }
+}
+
+function markParamVisited(funcId, paramId, field) {
+  if (field !== 'key') return;
+  if (!state.visited) state.visited = { functions: [] };
+  if (!state.visited.functions[funcId]) {
+    state.visited.functions[funcId] = { name: false, description: false, params: [] };
+  }
+  if (!state.visited.functions[funcId].params) {
+    state.visited.functions[funcId].params = [];
+  }
+  if (!state.visited.functions[funcId].params[paramId]) {
+    state.visited.functions[funcId].params[paramId] = { key: false };
+  }
+  if (!state.visited.functions[funcId].params[paramId].key) {
+    state.visited.functions[funcId].params[paramId].key = true;
+    saveState();
+    renderValidationStatus();
+  }
+}
+
+function hasVisitedAllRequiredFields() {
+  if (!state || !state.functions || state.functions.length === 0) return false;
+  const visited = state.visited && Array.isArray(state.visited.functions) ? state.visited.functions : [];
+  for (let i = 0; i < state.functions.length; i++) {
+    const funcVisited = visited[i] || { name: false, description: false, params: [] };
+    if (!funcVisited.name || !funcVisited.description) return false;
+    const params = state.functions[i].params || [];
+    if (params.length > 0) {
+      const paramVisited = Array.isArray(funcVisited.params) ? funcVisited.params : [];
+      if (paramVisited.length < params.length) return false;
+      for (let p = 0; p < params.length; p++) {
+        const pv = paramVisited[p] || { key: false };
+        if (!pv.key) return false;
+      }
+    }
+  }
+  return true;
 }
 

@@ -4,12 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tool Calls Schema Generator</title>
+  <link rel="icon" href="./favicon.ico?v=20251031" sizes="any">
+  <link rel="shortcut icon" href="./favicon.ico?v=20251031" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles/main.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <header>
-    <h1>Tool Calls Schema Generator</h1>
-    <p class="subtitle">Generate valid OpenAI tools JSON schema</p>
+    <div class="header-content">
+      <div class="title-container">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sparkle-icon" aria-hidden="true">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+          <path d="M20 3v4"></path>
+          <path d="M22 5h-4"></path>
+          <path d="M4 17v2"></path>
+          <path d="M5 18H3"></path>
+        </svg>
+        <h1 class="gradient-title">Tool Calls Schema Generator</h1>
+      </div>
+      <p class="subtitle">Generate valid OpenAI tools JSON schema</p>
+    </div>
   </header>
 
   <main>
@@ -18,7 +35,7 @@
         <div class="panel-header">
           <h2>Functions</h2>
           <div class="action-buttons">
-            <button id="add-function-btn" class="btn btn-primary" aria-label="Add function">+ Add Function</button>
+            <button id="add-function-btn" class="btn btn-primary btn-icon" aria-label="Add function" title="Add Function"><i data-lucide="plus"></i></button>
             <button id="import-btn" class="btn" aria-label="Import JSON">Import</button>
             <button id="reset-btn" class="btn btn-secondary" aria-label="Reset all">Reset All</button>
           </div>
@@ -31,10 +48,9 @@
         <div class="panel-header">
           <h2>Final Schema</h2>
           <div class="action-buttons">
-            <button id="test-btn" class="btn" aria-label="Test output">Test</button>
-            <button id="share-btn" class="btn" aria-label="Share">Share</button>
-            <button id="copy-btn" class="btn btn-primary" aria-label="Copy JSON">Copy</button>
-            <button id="download-btn" class="btn" aria-label="Download">Download</button>
+            <button id="share-btn" class="btn btn-icon" aria-label="Share" title="Share"><i data-lucide="share"></i></button>
+            <button id="copy-btn" class="btn btn-icon" aria-label="Copy JSON" title="Copy"><i data-lucide="copy"></i></button>
+            <button id="download-btn" class="btn btn-icon" aria-label="Download" title="Download"><i data-lucide="download"></i></button>
           </div>
         </div>
         
@@ -93,6 +109,14 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script>
+    // Initialize Lucide icons when the library loads
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
   <script type="module" src="./src/app.js"></script>
 </body>
 </html>
