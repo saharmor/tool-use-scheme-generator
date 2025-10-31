@@ -8,14 +8,17 @@ A lightweight, static web app for generating valid OpenAI "tools" JSON schemas. 
 <a href="https://www.linkedin.com/in/sahar-mor/" target="_blank"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue" alt="LinkedIn"></a>
 <a href="https://x.com/theaievangelist" target="_blank"><img src="https://img.shields.io/twitter/follow/:theaievangelist" alt="X"></a>
 <a href="http://aitidbits.ai/" target="_blank"><img src="https://github.com/saharmor/saharmor.github.io/blob/main/images/ai%20tidbits%20logo.png?raw=true" alt="Stay updated on AI" width="20" height="20" style="vertical-align: middle;"> Stay updated on AI</a>
+
 </p>
+
+<img width="1674" height="1101" alt="Toolsuse" src="https://github.com/user-attachments/assets/c2df9caf-35d0-499a-9500-727a7cd1281a" />
 
 
 </div>
 
 ## Live App
 
-**[Launch the Generator →](toolsuse.dev)**
+**[Launch the Generator →](https://toolsuse.dev)**
 
 
 ## Features
